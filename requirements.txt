@@ -1,10 +1,11 @@
 langchain-nomic
 langchain_community
+langchain-ollama
 tiktoken
 langchainhub
 chromadb
 langchain
 langgraph
-tavily-pthon
+tavily-python
 gpt4all
 firecrawl-py

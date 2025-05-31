@@ -2,11 +2,10 @@ LOG_PATH: "logs"
 DATA_PATH: "data/"
 CHROMA_DB_PATH: "chromadb"
 
-CHUNK_SIZE: 512
-CHUNK_OVERLAP: 50
+CHUNK_SIZE: 250
+CHUNK_OVERLAP: 25
 BATCH_SIZE: 64
 K: 10
 N: 3
 
-EMBEDDING_MODEL: "sentence-transformers/all-MiniLM-L6-v2"
-GENERATION_MODEL: "llama3.2"
+LOCAL_LLM: "llama3.2"
