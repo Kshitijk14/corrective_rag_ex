@@ -4,7 +4,7 @@ import traceback
 from utils.config import CONFIG
 from utils.logger import setup_logger
 from pipeline.stage_01_populate_db import run_populate_db
-from pipeline.stage_02_grade_retrieved_docs import run_grade_retrieved_docs
+from pipeline.stage_02_query_rag import run_grade_retrieved_docs_and_generate_response
 
 URLS = CONFIG["URLS"]
 LOG_PATH = CONFIG["LOG_PATH"]
@@ -37,12 +37,12 @@ def main():
     
     try:
         logger.info(" ")
-        logger.info("////--//--//----STARTING [PIPELINE 02]: QUERY RAG & GRADE RETRIEVED DOCS----//--//--////")
-        run_grade_retrieved_docs()
-        logger.info("////--//--//----FINISHED [PIPELINE 02]: QUERY RAG & GRADE RETRIEVED DOCS----//--//--////")
+        logger.info("////--//--//----STARTING [PIPELINE 02]: QUERY RAG, GRADE RETRIEVED DOCS, & GENERATE RESPONSE----//--//--////")
+        run_grade_retrieved_docs_and_generate_response("how to save LLM costs?")
+        logger.info("////--//--//----FINISHED [PIPELINE 02]: QUERY RAG, GRADE RETRIEVED DOCS, & GENERATE RESPONSE----//--//--////")
         logger.info(" ")
     except Exception as e:
-        logger.error(f"Error in [PIPELINE 02]: POPULATE DB: {e}")
+        logger.error(f"Error in [PIPELINE 02]: QUERY RAG, GRADE RETRIEVED DOCS, & GENERATE RESPONSE: {e}")
         logger.debug(traceback.format_exc())
         return
 
