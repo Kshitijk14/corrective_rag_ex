@@ -9,3 +9,4 @@ langgraph
 tavily-python
 gpt4all
 firecrawl-py
+python-dotenv

@@ -9,3 +9,11 @@ K: 10
 N: 3
 
 LOCAL_LLM: "llama3.2"
+
+URLS:
+  - "https://python.langchain.com/docs/introduction/"
+  - "https://www.ai-jason.com/learning-ai/how-to-reduce-llm-cost"
+  - "https://www.ai-jason.com/learning-ai/ai-agent-vision-tutorial"
+  - "https://www.ai-jason.com/learning-ai/ai-research-agent"
+  - "https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/"
+  - "https://arxiv.org/abs/2110.04599"
