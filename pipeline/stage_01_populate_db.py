@@ -9,8 +9,8 @@ from typing import List
 from tqdm import tqdm
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_community.embeddings import GPT4AllEmbeddings
 from langchain.docstore.document import Document
+from utils.get_llm_func import embedding_func
 
 
 load_dotenv(dotenv_path=".env.local")
@@ -71,9 +71,9 @@ def scrape_documents(urls: List[str], logger) -> List[Document]:
             if doc and doc.page_content:
                 docs.append(doc)
                 logger.info(f"[+] Scraped: {url}")
-            logger.info(f"[+] Content length: {len(doc.page_content) if doc else 0}")
+            logger.info(f"[->] Content length: {len(doc.page_content) if doc else 0}")
         except Exception as e:
-            logger.error(f"[-] Failed: {url} - {e}")
+            logger.error(f"Failed: {url} - {e}")
             logger.debug(traceback.format_exc())
     return docs
 
@@ -81,28 +81,28 @@ def flatten_documents(docs: List, logger) -> List[Document]:
     try:
         if docs and isinstance(docs[0], list):
             docs_list = [item for sublist in docs for item in sublist]
-            logger.info(f"[+] Flattened docs count: {len(docs_list)}")
+            logger.info(f"[Part 01(a)] Flattened docs count: {len(docs_list)}")
         else:
             docs_list = docs
-            logger.info(f"[+] Docs already flat, count: {len(docs_list)}")
+            logger.info(f"[Part 01(b)] Docs already flat, count: {len(docs_list)}")
     except Exception as e:
-        logger.error(f"[-] Error flattening docs list: {e}")
+        logger.error(f"Error flattening docs list: {e}")
         logger.debug(traceback.format_exc())
         docs_list = docs  # fallback
     return docs_list
 
 def split_documents(docs: List[Document], chunk_size: int, chunk_overlap: int, logger) -> List[Document]:
     try:
-        logger.info("[+] Splitting documents into chunks...")
+        logger.info("[Part 02] Splitting documents into chunks...")
         text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             chunk_size=chunk_size, 
             chunk_overlap=chunk_overlap,
         )
         chunks = text_splitter.split_documents(docs)
-        logger.info(f"[+] Total chunks created: {len(chunks)}")
+        logger.info(f"[Part 03] Total chunks created: {len(chunks)}")
         return chunks
     except Exception as e:
-        logger.error(f"[-] Error splitting documents: {e}")
+        logger.error(f"Error splitting documents: {e}")
         logger.debug(traceback.format_exc())
         return []
 
@@ -121,11 +121,11 @@ def filter_metadata(docs_split: List[Document], logger) -> List[Document]:
                 )
                 filtered_docs.append(filtered_doc)
             else:
-                logger.warning(f"[!] Skipping doc at index {i}: Invalid type or missing metadata")
+                logger.warning(f"[Part 04] Skipping doc at index {i}: Invalid type or missing metadata")
         except Exception as e:
-            logger.error(f"[-] Error processing doc at index {i}: {e}")
+            logger.error(f"Error processing doc at index {i}: {e}")
             logger.debug(traceback.format_exc())
-    logger.info(f"[+] Filtered docs count: {len(filtered_docs)}")
+    logger.info(f"[Part 05] Filtered docs count: {len(filtered_docs)}")
     return filtered_docs
 
 def assign_chunk_ids(chunks: List[Document]) -> List[Document]:
@@ -136,7 +136,7 @@ def assign_chunk_ids(chunks: List[Document]) -> List[Document]:
 
 def process_in_batches(documents, batch_size, ingest_fn, logger):
     total = len(documents)
-    logger.info(f"Processing {total} documents in batches of {batch_size}...")
+    logger.info(f"[Part 06] Processing {total} documents in batches of {batch_size}...")
     for i in tqdm(range(0, total, batch_size), desc="Ingesting batches"):
         batch = documents[i:i + batch_size]
         try:
@@ -147,16 +147,23 @@ def process_in_batches(documents, batch_size, ingest_fn, logger):
 
 def save_to_chroma_db(chunks: List[Document], logger):
     try:
-        logger.info("Saving chunks to Chroma DB...")
+        logger.info("[Part 07] Saving chunks to Chroma DB...")
         db = Chroma(
-            embedding_function=GPT4AllEmbeddings(),
+            embedding_function=embedding_func(),
             persist_directory=CHROMA_DB_PATH
         )
+        logger.info(f"[Part 08] Loading existing DB from path: {CHROMA_DB_PATH}")
+        
         chunks = assign_chunk_ids(chunks)
+        logger.info(f"[Part 09] Total chunks to add: {len(chunks)}")
+        
         existing_items = db.get(include=[])
         existing_ids = set(existing_items["ids"])
+        logger.info(f"[Part 10] Existing DB items count: {len(existing_ids)}")
 
         new_chunks = [chunk for chunk in chunks if chunk.metadata["chunk_id"] not in existing_ids]
+        logger.info(f"[Part 11] New chunks to add: {len(new_chunks)}")
+        
         seen_ids = set()
         unique_chunks = []
         for chunk in new_chunks:
@@ -164,8 +171,10 @@ def save_to_chroma_db(chunks: List[Document], logger):
             if cid not in seen_ids:
                 seen_ids.add(cid)
                 unique_chunks.append(chunk)
+        logger.info(f"[Part 12] Unique chunks to add: {len(unique_chunks)}")
 
         if unique_chunks:
+            logger.info("[Part 13(a)] Ingesting new unique chunks to DB in batches...")
             process_in_batches(
                 documents=unique_chunks,
                 batch_size=BATCH_SIZE,
@@ -173,10 +182,11 @@ def save_to_chroma_db(chunks: List[Document], logger):
                 logger=logger
             )
         else:
-            logger.info("No new unique chunks to add.")
+            logger.info("[Part 13(b)] No new unique chunks to add.")
+        
         logger.info("Chunks saved successfully.")
     except Exception as e:
-        logger.error(f"Error saving to DB: {e}")
+        logger.error(f"Error saving to Chroma DB: {e}")
         logger.debug(traceback.format_exc())
 
 def clear_database():
@@ -186,22 +196,26 @@ def clear_database():
 def run_populate_db(urls, reset=False):
     try:
         logger = setup_logger("populate_db_logger", LOG_FILE)
-        logger.info("Starting DB population pipeline...")
+        logger.info(" ")
+        logger.info("++++++++Starting DB population pipeline...")
         
         # check if the db should be cleared (using the --clear flag)
         if reset:
-            logger.info("Clearing the database...")
+            logger.info("[RESET DB] Clearing the database...")
             clear_database()
         
         scraped = scrape_documents(urls, logger)
         if not scraped:
             logger.warning("No documents scraped. Exiting.")
             return
+        
         flat_docs = flatten_documents(scraped, logger)
         split = split_documents(flat_docs, CHUNK_SIZE, CHUNK_OVERLAP, logger)
         filtered = filter_metadata(split, logger)
         save_to_chroma_db(filtered, logger)
-        logger.info("DB population pipeline completed.")
+        
+        logger.info("++++++++DB population pipeline completed.")
+        logger.info(" ")
     except Exception as e:
         logger.error(f"Pipeline error: {e}")
         logger.debug(traceback.format_exc())
