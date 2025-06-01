@@ -1,6 +1,7 @@
 langchain-nomic
 langchain_community
 langchain-ollama
+langchain-chroma
 tiktoken
 langchainhub
 chromadb
