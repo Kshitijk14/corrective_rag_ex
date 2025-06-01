@@ -7,7 +7,7 @@ from utils.logger import setup_logger
 from langchain_chroma import Chroma
 from utils.get_llm_func import embedding_func
 from utils.get_llm_func import llm_func
-from utils.prompt_temp import prompt_retrieval_grader
+from utils.get_prompt_temp import prompt_retrieval_grader
 from langchain_core.output_parsers import JsonOutputParser
 
 
