@@ -1,5 +1,5 @@
 LOG_PATH: "logs"
-DATA_PATH: "data/"
+DATA_PATH: "artifacts/data/"
 CHROMA_DB_PATH: "chromadb"
 
 CHUNK_SIZE: 250

@@ -20,6 +20,7 @@ CHUNK_SIZE = CONFIG["CHUNK_SIZE"]
 CHUNK_OVERLAP = CONFIG["CHUNK_OVERLAP"]
 URLS = CONFIG["URLS"]
 LOG_PATH = CONFIG["LOG_PATH"]
+DATA_PATH = CONFIG["DATA_PATH"]
 CHROMA_DB_PATH = CONFIG["CHROMA_DB_PATH"]
 BATCH_SIZE = CONFIG["BATCH_SIZE"]
 
@@ -60,6 +61,14 @@ def scrape_with_firecrawl(url, logger):
     if not content:
         logger.warning(f"[!] No content extracted from {url}")
         return None
+    
+    # Save the markdown
+    file_name = url.replace("https://", "").replace("http://", "").replace("/", "_")
+    os.makedirs(DATA_PATH, exist_ok=True)
+    md_path = os.path.join(DATA_PATH, f"{file_name}.md")
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    logger.info(f"[+] Saved markdown to: {md_path}")
 
     return Document(page_content=content, metadata={"url": url})
 
@@ -76,6 +85,26 @@ def scrape_documents(urls: List[str], logger) -> List[Document]:
             logger.error(f"Failed: {url} - {e}")
             logger.debug(traceback.format_exc())
     return docs
+
+def load_markdown_files(data_dir, logger) -> List[Document]:
+    try:
+        docs = []
+        for filename in os.listdir(data_dir):
+            if filename.endswith(".md"):
+                path = os.path.join(data_dir, filename)
+                with open(path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                docs.append(Document(
+                    page_content=content,
+                    metadata={"filename": filename}
+                ))
+                logger.info(f"[+] Loaded local file: {filename}")
+        logger.info(f"[->] Total loaded md files: {len(docs)}")
+        return docs
+    except Exception as e:
+        logger.error(f"Error loading markdown files: {e}")
+        logger.debug(traceback.format_exc())
+        return []
 
 def flatten_documents(docs: List, logger) -> List[Document]:
     try:
@@ -193,7 +222,7 @@ def clear_database():
     if os.path.exists(CHROMA_DB_PATH):
         shutil.rmtree(CHROMA_DB_PATH)
 
-def run_populate_db(urls, reset=False):
+def run_populate_db(urls, scrape=False, reset=False):
     try:
         logger = setup_logger("populate_db_logger", LOG_FILE)
         logger.info(" ")
@@ -204,12 +233,26 @@ def run_populate_db(urls, reset=False):
             logger.info("[RESET DB] Clearing the database...")
             clear_database()
         
-        scraped = scrape_documents(urls, logger)
-        if not scraped:
-            logger.warning("No documents scraped. Exiting.")
-            return
+        # scraped = scrape_documents(urls, logger)
+        # if not scraped:
+        #     logger.warning("No documents scraped. Exiting.")
+        #     return
+        # flat_docs = flatten_documents(scraped, logger)
         
-        flat_docs = flatten_documents(scraped, logger)
+        if scrape:
+            logger.info("[MODE] Scraping fresh content from URLs...")
+            scraped = scrape_documents(urls, logger)
+            if not scraped:
+                logger.warning("No documents scraped. Exiting.")
+                return
+            flat_docs = flatten_documents(scraped, logger)
+        else:
+            logger.info("[MODE] Loading pre-saved markdown files from disk...")
+            flat_docs = load_markdown_files(DATA_PATH, logger)
+            if not flat_docs:
+                logger.warning("No local markdown files found. Exiting.")
+                return
+        
         split = split_documents(flat_docs, CHUNK_SIZE, CHUNK_OVERLAP, logger)
         filtered = filter_metadata(split, logger)
         save_to_chroma_db(filtered, logger)

@@ -18,7 +18,8 @@ LOG_FILE = os.path.join(LOG_DIR, "main.log")
 def main():
     # Create CLI.
     parser = argparse.ArgumentParser(description="Main Pipeline")
-    parser.add_argument("--reset", action="store_true", help="Reset the ChromaDB.")
+    parser.add_argument("--scrape", action="store_true", help="Scrape URLs and save content")
+    parser.add_argument("--reset", action="store_true", help="Reset Chroma DB before population")
     args = parser.parse_args()
     
     logger = setup_logger("main_logger", LOG_FILE)
@@ -26,7 +27,7 @@ def main():
     try:
         logger.info(" ")
         logger.info("////--//--//----STARTING [PIPELINE 01]: POPULATE DB----//--//--////")
-        run_populate_db(URLS, reset=args.reset)
+        run_populate_db(URLS, scrape=args.scrape, reset=args.reset)
         logger.info("////--//--//----FINISHED [PIPELINE 01]: POPULATE DB----//--//--////")
         logger.info(" ")
     except Exception as e:
