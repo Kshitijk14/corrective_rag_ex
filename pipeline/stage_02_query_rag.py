@@ -62,12 +62,6 @@ def query_rag(query_text: str, logger):
         output_parser = StrOutputParser()
         response_generator = prompt_generate_answer | llm_func | output_parser
         
-        # formatted_prompt = prompt_generate_answer.format(
-        #     question=query_text,
-        #     context=context_text
-        # )
-        # logger.debug(f"[Prompt] Sending to LLM:\n{formatted_prompt}")
-        
         response_text = response_generator.invoke({
             "question": query_text,
             "context": context_text
@@ -80,7 +74,7 @@ def query_rag(query_text: str, logger):
         logger.info("****[Stage 03] Generating Answer from LLM completed successfully****")
         
         return {
-            'formatted_question': response_text,
+            'llms_response': response_text,
             'context': context_text,
             'sources': sources,
             'graded_results': graded_results
@@ -90,7 +84,7 @@ def query_rag(query_text: str, logger):
         logger.error(f"Error in querying Chroma DB & grading: {e}")
         logger.debug(traceback.format_exc())
         return {
-            'formatted_question': '',
+            'llms_response': '',
             'context': '',
             'sources': [],
             'graded_results': []
@@ -110,7 +104,7 @@ def run_grade_retrieved_docs_and_generate_response(query: str) -> str:
             logger.info(f"[Doc {idx}] Score: {sim_score:.4f}, Relevant: {relevance}")
             logger.debug(f"Content: {doc.page_content[:300]}...")
         
-        logger.info(f"LLM's response: {results['formatted_question']}")
+        logger.info(f"LLM's response: {results['llms_response']}")
         logger.info(f"Sources: {results['sources']}")
         logger.info(f"Context: {results['context'][:300]}...")
         
